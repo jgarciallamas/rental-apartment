@@ -1,11 +1,59 @@
+import { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { isDaySelectable } from "lib/dates";
+import {
+  isDaySelectable,
+  addDayToRange,
+  getDatesBetweenDates,
+  getBlockedDates,
+} from "lib/dates";
 import { getCost } from "lib/cost";
+import { getBookedDates } from "lib/booking";
+
+const yesterday = new Date();
+yesterday.setDate(yesterday.getDate() - 1);
+
+const sixMonthsFromNow = new Date();
+sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 30 * 6);
 
 export default function Calendar() {
+  const [from, setFrom] = useState();
+  const [to, setTo] = useState();
+
+  const handleDayClick = (day) => {
+    const range = addDayToRange(day, {
+      from,
+      to,
+    });
+
+    if (!range.to) {
+      if (!isDaySelectable(range.from)) {
+        alert("This date cannot be selected");
+        return;
+      }
+      range.to = range.from;
+    }
+
+    if (range.to && range.from) {
+      if (!isDaySelectable(range.to)) {
+        alert("The end date cannot be selected");
+        return;
+      }
+    }
+
+    const daysInBetween = getDatesBetweenDates(range.from, range.to);
+
+    for (const dayInBetween of daysInBetween) {
+      if (!isDaySelectable(dayInBetween)) {
+        alert("Some days between those 2 dates cannot be selected");
+        return;
+      }
+    }
+    setFrom(range.from);
+    setTo(range.to);
+  };
   return (
     <div>
       <Head>
@@ -70,6 +118,21 @@ export default function Calendar() {
                   </div>
                 ),
               }}
+              selected={[from, { from, to }]}
+              mode="range"
+              onDayClick={handleDayClick}
+              disabled={[
+                ...getBlockedDates(),
+                ...getBookedDates(),
+                {
+                  from: new Date("0000"),
+                  to: yesterday,
+                },
+                {
+                  from: sixMonthsFromNow,
+                  to: new Date("4000"),
+                },
+              ]}
             />
           </div>
         </div>
